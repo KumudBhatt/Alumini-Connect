@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int                @id @default(autoincrement())
+  username         String             @unique // Username cannot be changed
+  firstname        String
+  lastname         String
+  email            String             @unique // Email cannot be changed
+  password         String
+  avatarUrl        String?
+  bio              String?
+  role             Role               @default(USER)
+
+  // Company details
+  company          String?
+  companyLocation  String?
+
+  // Education details
+  fieldOfStudy     String?
+  graduationStartYear Int?
+  graduationEndYear   Int?
+
+  // Location details
+  location         String?
+
+  // Relations
+  posts            Post[]             // User can have many Posts
+  likes            Like[]             // User can like many Posts
+  comments         Comment[]          // User can write many Comments
+  jobs             Job[]              // User can post many Jobs
+  successStories   SuccessStory[]     // User can create multiple success stories
+  donations        Donation[]         // User can donate
+  feedbacks        Feedback[]         // User can give feedback
+
+  followers        Connection[]       @relation("Following") // Users following this user
+  followings       Connection[]       @relation("Follower")  // Users this user is following
+
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model Post {
+  id          Int       @id @default(autoincrement())
+  content     String
+  mediaUrls   Json?
+
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    Int       // Foreign key to User
+
+  likes       Like[]    // Relation: Post can have many Likes
+  comments    Comment[] // Relation: Post can have many Comments
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Like {
+  id        Int     @id @default(autoincrement())
+
+  post      Post    @relation(fields: [postId], references: [id])
+  postId    Int     // Foreign key to Post
+
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int     // Foreign key to User
+
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        Int     @id @default(autoincrement())
+  content   String
+
+  post      Post    @relation(fields: [postId], references: [id])
+  postId    Int     // Foreign key to Post
+
+  user      User    @relation(fields: [userId], references: [id])
+  userId    Int     // Foreign key to User
+
+  createdAt DateTime @default(now())
+}
+
+model Job {
+  id           Int       @id @default(autoincrement())
+  title        String
+  company      String
+  experience   ExperienceLevel // Enum for experience level
+  location     String
+  jobType      JobType         // Enum for job type
+  industry     String
+  jobFunction  String          // E.g., Engineering, Marketing
+  remote       Remote          // Enum for remote type (ONSITE, REMOTE, HYBRID)
+  postedBy     User            @relation(fields: [postedById], references: [id])
+  postedById   Int             // Foreign key to User who posted the job
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model SuccessStory {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  author      User     @relation(fields: [authorId], references: [id]) // Reference to User model
+  authorId    Int      // Foreign key to User
+  published   Boolean  @default(false) // Whether the story is published or not
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Donation {
+  id         Int      @id @default(autoincrement())
+  amount     Float    // Amount donated
+  currency   String   // Currency of the donation (e.g., USD, EUR)
+  donor      User     @relation(fields: [donorId], references: [id]) // Reference to User model
+  donorId    Int      // Foreign key to User
+  createdAt  DateTime @default(now()) // When the donation was made
+}
+
+model Feedback {
+  id          Int      @id @default(autoincrement())
+  content     String   // Feedback content
+  attachedFile String? // Optional URL to the attached file
+  user        User     @relation(fields: [userId], references: [id])   // Foreign key to User
+  userId      Int      // Foreign key to User
+  
+  createdAt   DateTime @default(now())
+}
+
+model Connection {
+  id            Int      @id @default(autoincrement())
+  follower      User     @relation("Follower", fields: [followerId], references: [id])
+  followerId    Int
+  following     User     @relation("Following", fields: [followingId], references: [id])
+  followingId   Int
+  status        ConnectionStatus @default(PENDING) // Enum to track the status of the connection (PENDING, ACCEPTED, REJECTED)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+
+enum ExperienceLevel {
+  INTERNSHIP
+  ENTRY_LEVEL
+  ASSOCIATE
+  MID_SENIOR_LEVEL
+  DIRECTOR
+  EXECUTIVE
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  TEMPORARY
+  FREELANCE
+}
+
+enum Remote {
+  ONSITE
+  REMOTE
+  HYBRID
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
